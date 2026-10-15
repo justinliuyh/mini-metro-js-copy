@@ -1,0 +1,30 @@
+name: Cloud Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install and bundle
+        run: |
+          npm install
+          npm install -D vite-plugin-singlefile
+          node -e '
+            const fs = require("fs");
+            let cfg = fs.readFileSync("vite.config.ts", "utf8");
+            if (!cfg.includes("viteSingleFile")) {
+              cfg = `import { viteSingleFile } from "vite-plugin-singlefile";\n` + cfg;
+              cfg = cfg.replace(/plugins:\s*\[([^\]]*)\]/, "plugins: [$1, viteSingleFile()]");
+              fs.writeFileSync("vite.config.ts", cfg);
+            }
+          '
+          npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: minimetro-html
+          path: dist/index.html
